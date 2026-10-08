@@ -42,7 +42,7 @@ function Word({ children, position }: { children: string; position: THREE.Vector
             onPointerOver={over}
             onPointerOut={out}
             position={position}
-            fontSize={1.2}
+            fontSize={1.1}
             lineHeight={1}
             letterSpacing={0.02}
             material-toneMapped={false}
@@ -53,33 +53,45 @@ function Word({ children, position }: { children: string; position: THREE.Vector
     );
 }
 
-function Cloud({ radius = 11 }: { radius?: number }) {
-    // Use Fibonacci sphere algorithm to evenly distribute words in 3D space
+function Cloud({ radius = 10 }: { radius?: number }) {
+    const groupRef = useRef<THREE.Group>(null);
+
+    // Fibonacci Sphere distribution (creates a uniform, solid spherical globe layout)
     const words = useMemo(() => {
         const temp: [THREE.Vector3, string][] = [];
         const count = allSkills.length;
+        const phi = Math.PI * (3 - Math.sqrt(5)); // Golden angle
+
         for (let i = 0; i < count; i++) {
-            const y = 1 - (i / (count - 1)) * 2;
-            const r = Math.sqrt(1 - y * y);
-            const theta = Math.PI * 2.39996 * i; // Golden angle
-            const x = Math.cos(theta) * r;
-            const z = Math.sin(theta) * r;
-            temp.push([new THREE.Vector3(x * radius, y * radius, z * radius), allSkills[i]]);
+            const y = 1 - (i / (count - 1)) * 2; // y goes from 1 to -1
+            const radiusAtY = Math.sqrt(1 - y * y); // radius at y
+            const theta = phi * i; // golden angle increment
+
+            const x = Math.cos(theta) * radiusAtY * radius;
+            const z = Math.sin(theta) * radiusAtY * radius;
+            const scaledY = y * radius;
+
+            temp.push([new THREE.Vector3(x, scaledY, z), allSkills[i]]);
         }
         return temp;
     }, [radius]);
 
-    // REMOVED the conflicting group rotation! 
-    // We now just render the words statically and let OrbitControls spin the camera.
+    // Rotate the entire sphere group together like a planet
+    useFrame((_, delta) => {
+        if (groupRef.current) {
+            groupRef.current.rotation.y += delta * 0.2; // Smooth continuous globe rotation
+            groupRef.current.rotation.x += delta * 0.05; // Subtle tilting rotation
+        }
+    });
 
     return (
-        <>
+        <group ref={groupRef}>
             {words.map(([pos, word], index) => (
                 <Word key={index} position={pos}>
                     {word}
                 </Word>
             ))}
-        </>
+        </group>
     );
 }
 
@@ -96,16 +108,15 @@ export default function SkillCloud() {
     return (
         <div className="w-full h-[450px] lg:h-[600px] cursor-grab active:cursor-grabbing relative">
             <Suspense fallback={<Loader />}>
-                <Canvas camera={{ position: [0, 0, 25], fov: 60 }}>
-                    <fog attach="fog" args={["#111111", 10, 40]} />
+                <Canvas camera={{ position: [0, 0, 24], fov: 60 }}>
+                    <fog attach="fog" args={["#111111", 12, 40]} />
                     <ambientLight intensity={0.5} />
-                    <Cloud radius={11} />
+                    <Cloud radius={9.5} />
 
                     <OrbitControls
                         enableZoom={false}
                         enablePan={false}
-                        autoRotate
-                        autoRotateSpeed={1.5} // Sped up slightly to replace the old group rotation
+                        rotateSpeed={0.6}
                     />
                 </Canvas>
             </Suspense>
