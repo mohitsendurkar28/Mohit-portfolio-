@@ -22,7 +22,7 @@ function Word({
     children: string;
     position: THREE.Vector3;
 }) {
-    const ref = useRef<THREE.Mesh | null>(null);
+    const ref = useRef<any>(null);
     const [hovered, setHovered] = useState(false);
 
     // Reusable quaternions to avoid creating new objects every frame
